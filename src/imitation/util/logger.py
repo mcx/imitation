@@ -138,7 +138,9 @@ class HierarchicalLogger(sb_logger.Logger):
 
 
 def configure(
-    folder: Optional[types.AnyPath] = None, format_strs: Optional[Sequence[str]] = None
+    folder: Optional[types.AnyPath] = None, 
+    format_strs: Optional[Sequence[str]] = None,
+    custom_writers: Optional[Sequence[sb_logger.KVWriter]] = None,
 ) -> HierarchicalLogger:
     """Configure Stable Baselines logger to be `accumulate_means()`-compatible.
 
@@ -149,6 +151,7 @@ def configure(
         folder: Argument from `stable_baselines3.logger.configure`.
         format_strs: An list of output format strings. For details on available
           output formats see `stable_baselines3.logger.make_output_format`.
+        custom_writers: An optional list of custom KVWriters. 
     """
     if folder is None:
         now = datetime.datetime.now()
@@ -160,6 +163,8 @@ def configure(
     if format_strs is None:
         format_strs = ["stdout", "log", "csv"]
     output_formats = _build_output_formats(folder, format_strs)
+    if custom_writers:
+        output_formats += custom_writers
     default_logger = sb_logger.Logger(folder, output_formats)
     hier_logger = HierarchicalLogger(default_logger, format_strs)
     return hier_logger
