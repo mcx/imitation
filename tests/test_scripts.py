@@ -1,4 +1,4 @@
-"""Smoke tests for CLI programs in imitation.scripts.*
+"""Smoke tests for CLI programs in `imitation.scripts.*`.
 
 Every test in this file should use `parallel=False` to turn off multiprocessing because
 codecov might interact poorly with multiprocessing. The 'fast' named_config for each
@@ -56,7 +56,11 @@ CARTPOLE_TEST_POLICY_WITHOUT_VECNORM_PATH = (
 def sacred_capture_use_sys():
     """Set Sacred capture mode to "sys" because default "fd" option leads to error.
 
-    See https://github.com/IDSIA/sacred/issues/289."""
+    See https://github.com/IDSIA/sacred/issues/289.
+
+    Yields:
+        None after setting capture mode; restores it after yield.
+    """
     # TODO(shwang): Stop using non-default "sys" mode once the issue is fixed.
     temp = sacred.SETTINGS["CAPTURE_MODE"]
     sacred.SETTINGS.CAPTURE_MODE = "sys"
@@ -294,19 +298,11 @@ def test_train_adversarial_algorithm_value_error(tmpdir):
         train_adversarial.train_adversarial_ex.run(
             named_configs=base_named_configs,
             config_updates=base_config_updates.new_child(
-                dict(discrim_net_kwargs={"BAD_VALUE": "bar"}),
-            ),
-        )
-
-    with pytest.raises(ValueError, match=".*BAD_VALUE.*"):
-        train_adversarial.train_adversarial_ex.run(
-            named_configs=base_named_configs,
-            config_updates=base_config_updates.new_child(
                 dict(algorithm_kwargs={"BAD_VALUE": "bar"}),
             ),
         )
 
-    with pytest.raises(ValueError, match=".*BAD_VALUE.*"):
+    with pytest.raises(FileNotFoundError, match=".*BAD_VALUE.*"):
         train_adversarial.train_adversarial_ex.run(
             named_configs=base_named_configs,
             config_updates=base_config_updates.new_child(
@@ -322,10 +318,13 @@ def test_train_adversarial_algorithm_value_error(tmpdir):
         )
 
 
-def test_transfer_learning(tmpdir):
+def test_transfer_learning(tmpdir: str) -> None:
     """Transfer learning smoke test.
 
     Saves a dummy AIRL test reward, then loads it for transfer learning.
+
+    Args:
+        tmpdir: Temporary directory to save results to.
     """
     tmpdir = pathlib.Path(tmpdir)
     log_dir_train = tmpdir / "train"
@@ -342,13 +341,13 @@ def test_transfer_learning(tmpdir):
     _check_rollout_stats(run.result["imit_stats"])
 
     log_dir_data = tmpdir / "expert_demos"
-    discrim_path = log_dir_train / "checkpoints" / "final" / "discrim.pt"
+    reward_path = log_dir_train / "checkpoints" / "final" / "reward_test.pt"
     run = expert_demos.expert_demos_ex.run(
         named_configs=["cartpole", "fast"],
         config_updates=dict(
             log_dir=log_dir_data,
-            reward_type="DiscrimNet",
-            reward_path=discrim_path,
+            reward_type="RewardNet_shaped",
+            reward_path=reward_path,
         ),
     )
     assert run.status == "COMPLETED"
@@ -471,10 +470,10 @@ def test_parallel_train_adversarial_custom_env(tmpdir):
     import gym
 
     try:
-        gym.make("Ant-v3")
+        gym.make("seals/Ant-v0")
     except gym.error.DependencyNotInstalled:  # pragma: no cover
         pytest.skip("mujoco_py not available")
-    env_named_config = "custom_ant"
+    env_named_config = "seals_ant"
     rollout_path = _generate_test_rollouts(tmpdir, env_named_config)
 
     config_updates = dict(
