@@ -5,8 +5,9 @@ import datetime
 import logging
 import os
 import tempfile
-from typing import Generator, Optional, Sequence
+from typing import Any, Dict, Mapping, Tuple, Union, Generator, Optional, Sequence
 
+import wandb
 import stable_baselines3.common.logger as sb_logger
 
 from imitation.data import types
@@ -154,6 +155,31 @@ class HierarchicalLogger(sb_logger.Logger):
         self.default_logger.close()
         for logger in self._cached_loggers.values():
             logger.close()
+
+
+
+class WandbOutputFormat(sb_logger.KVWriter):
+    def __init__(self, wb_options: Mapping[str, Any], config: Mapping[str, Any]):
+        wandb.init(
+            # TODO(yawen): to pass a project name during init instead of hard specify
+            project="reward_function_transfer",
+            job_type="agent",
+            config=config,
+            **wb_options,
+        )
+
+    def write(
+        self,
+        key_values: Dict[str, Any],
+        key_excluded: Dict[str, Union[str, Tuple[str, ...]]],
+        step: int = 0,
+    ) -> None:
+        # TODO(yawen): This doesn't support all use cases
+        # (e.g. key_excluded is just ignored and videos won't work).
+        wandb.log(key_values, step=step)
+
+    def close(self) -> None:
+        wandb.finish()
 
 
 def configure(

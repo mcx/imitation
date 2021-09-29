@@ -20,6 +20,23 @@ from imitation.util import logger
 from imitation.util import sacred as sacred_util
 from imitation.util import util
 
+from imitation.util.logger import WandbOutputFormat
+
+from stable_baselines3.common.vec_env import VecVideoRecorder
+
+
+@train_adversarial_ex.capture
+def get_wb_options(
+    log_dir, env_name, subtask_str, video_tracking, postfix, wb_tag, seed=0
+):
+    wb_options = dict(
+        name=f"{env_name}-{subtask_str}-seed{seed}{postfix}",
+        tags=[str(env_name), subtask_str, f"seed{seed}"] + [wb_tag],
+        monitor_gym=True if video_tracking else False,
+        save_code=True,
+        dir=log_dir,
+    )
+    return wb_options
 
 def save(trainer, save_path):
     """Save discriminator and generator."""
@@ -41,6 +58,7 @@ def save(trainer, save_path):
 def train_adversarial(
     _run,
     _seed: int,
+    _config: Mapping[str, Any],
     algorithm: str,
     env_name: str,
     env_make_kwargs: Optional[Mapping[str, Any]],
@@ -58,6 +76,8 @@ def train_adversarial(
     reward_net_cls: Optional[Type[reward_nets.RewardNet]],
     reward_net_kwargs: Optional[Mapping[str, Any]],
     algorithm_kwargs: Mapping[str, Mapping],
+    wandb_integration: Optional[bool],
+    video_tracking: Optional[bool],
 ) -> Mapping[str, Mapping[str, float]]:
     """Train an adversarial-network-based imitation learning algorithm.
 
@@ -113,6 +133,8 @@ def train_adversarial(
             to both the `AIRL` and `GAIL` constructors. Duplicate keyword argument keys
             between `algorithm_kwargs["shared"]` and `algorithm_kwargs["airl"]` (or
             "gail") leads to an error.
+        wandb_integration: If True, then save the experiment logs to wandb.
+        video_tracking: If True, then save the video tracking data.
 
     Returns:
         A dictionary with two keys. "imit_stats" gives the return value of
@@ -155,7 +177,17 @@ def train_adversarial(
 
     total_timesteps = int(total_timesteps)
 
-    custom_logger = logger.configure(log_dir, ["tensorboard", "stdout"])
+    custom_writers = []
+    if wandb_integration:
+        wb_options = get_wb_options()
+        writer = WandbOutputFormat(wb_options=wb_options, config=_config)
+        custom_writers.append(writer)
+    custom_logger = logger.configure(
+        folder=osp.join(log_dir, "rl"),
+        format_strs=["tensorboard", "stdout"],
+        custom_writers=custom_writers,
+    )
+
     os.makedirs(log_dir, exist_ok=True)
     sacred_util.build_sacred_symlink(log_dir, _run)
 
@@ -168,6 +200,14 @@ def train_adversarial(
         max_episode_steps=max_episode_steps,
         env_make_kwargs=env_make_kwargs,
     )
+
+    if video_tracking:
+        venv = VecVideoRecorder(
+            venv,
+            osp.join(log_dir, "videos"),
+            record_video_trigger=lambda x: x % 5000 == 0,
+            video_length=500,
+        )
 
     gen_algo = util.init_rl(
         venv,
@@ -234,6 +274,9 @@ def train_adversarial(
     )
     results["expert_stats"] = rollout.rollout_stats(expert_trajs)
     results["imit_stats"] = rollout.rollout_stats(trajs)
+
+    venv.close()
+    
     return results
 
 
