@@ -36,6 +36,7 @@ def expert_demos_defaults():
     policy_save_final = True  # If True, save after training is finished.
 
     log_root = os.path.join("output", "expert_demos")  # output directory
+    wb_integration = False  # If True, use wandb for logging
 
 
 @expert_demos_ex.config
@@ -64,6 +65,20 @@ def rollouts_from_policy_only_defaults(log_dir):
         log_dir,
         "rollout.pkl",
     )  # Save path for `rollouts_from_policy` only.
+
+
+# Optional for WandB integration, this is used only when wandb_integration=True
+# New users can overwrite this with their own function
+
+
+@expert_demos_ex.config
+def wb_integration_only_defaults(env_name, seed, log_dir):
+    wb_options = dict(
+        project="imitation",
+        name=f"{env_name}-seed{seed}",
+        monitor_gym=False,
+        dir=log_dir,
+    )
 
 
 # Standard Gym env configs

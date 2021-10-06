@@ -24,6 +24,7 @@ def rollouts_and_policy(
     *,
     _run: sacred.run.Run,
     _seed: int,
+    _config: Mapping[str, Any],
     env_name: str,
     env_make_kwargs: Optional[Mapping[str, Any]],
     num_vec: int,
@@ -42,6 +43,7 @@ def rollouts_and_policy(
     policy_save_interval: int,
     policy_save_final: bool,
     log_dir: str,
+    wb_integration: bool,
 ) -> Mapping[str, float]:
     """Trains an expert policy from scratch and saves the rollouts and policy.
 
@@ -89,6 +91,7 @@ def rollouts_and_policy(
         policy_save_final: If True, then save the policy right after training is
             finished.
         log_dir: The root directory to save metrics and checkpoints to.
+        wb_integration: If True, then use wandb to log metrics.
 
     Returns:
         The return value of `rollout_stats()` using the final policy.
@@ -103,9 +106,15 @@ def rollouts_and_policy(
     eval_sample_until = rollout.make_min_episodes(n_episodes_eval)
 
     logging.basicConfig(level=logging.INFO)
+
+    custom_writers = []
+    if wb_integration:
+        writer = wb_logger.WandbOutputFormat(wb_options=_config["wb_options"], config=_config)
+        custom_writers.append(writer)
     custom_logger = logger.configure(
         folder=osp.join(log_dir, "rl"),
         format_strs=["tensorboard", "stdout"],
+        custom_writers=custom_writers,
     )
 
     rollout_dir = osp.join(log_dir, "rollouts")
