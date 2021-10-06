@@ -1,12 +1,13 @@
 """Wrapper to record rendered video frames from an environment."""
 
 import os
+from typing import Optional
 
 import gym
 from gym.wrappers.monitoring import video_recorder
 
 from imitation.data import types
-from typing import Optional
+
 
 class VideoWrapper(gym.Wrapper):
     """Creates videos from wrapped environment by calling render after each timestep."""

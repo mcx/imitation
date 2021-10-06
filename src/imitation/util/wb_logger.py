@@ -1,16 +1,17 @@
-"""W&B integrations"""
+"""W&B integrations."""
 
-import wandb
+from typing import Any, Dict, Mapping, Tuple, Union
 
 import stable_baselines3.common.logger as sb_logger
-from typing import Any, Dict, Mapping, Tuple, Union
+import wandb
 
 
 class WandbOutputFormat(sb_logger.KVWriter):
-    """A stable-baseline logger that writes to wandb.
-    """
-    def __init__(self, 
-        wb_options: Mapping[str, Any], 
+    """A stable-baseline logger that writes to wandb."""
+
+    def __init__(
+        self,
+        wb_options: Mapping[str, Any],
         config: Mapping[str, Any],
     ):
         """Builds WandbOutputFormat.
@@ -28,10 +29,13 @@ class WandbOutputFormat(sb_logger.KVWriter):
         key_excluded: Dict[str, Union[str, Tuple[str, ...]]],
         step: int = 0,
     ) -> None:
-        for (key, value), (_, excluded) in zip(sorted(key_values.items()), sorted(key_excluded.items())):
+        for (key, value), (_, excluded) in zip(
+            sorted(key_values.items()),
+            sorted(key_excluded.items()),
+        ):
             if excluded is not None:
                 continue
-            wandb.log({key:value}, step=step)
+            wandb.log({key: value}, step=step)
 
     def close(self) -> None:
         wandb.finish()

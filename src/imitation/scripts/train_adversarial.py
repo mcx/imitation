@@ -10,6 +10,7 @@ from typing import Any, Mapping, Optional, Type
 
 import torch as th
 from sacred.observers import FileStorageObserver
+from stable_baselines3.common.vec_env import VecVideoRecorder
 
 from imitation.algorithms.adversarial import airl, gail
 from imitation.data import rollout, types
@@ -19,15 +20,18 @@ from imitation.scripts.config.train_adversarial import train_adversarial_ex
 from imitation.util import logger
 from imitation.util import sacred as sacred_util
 from imitation.util import util
-
 from imitation.util.logger import WandbOutputFormat
-
-from stable_baselines3.common.vec_env import VecVideoRecorder
 
 
 @train_adversarial_ex.capture
 def get_wb_options(
-    log_dir, env_name, subtask_str, video_tracking, postfix, wb_tag, seed=0
+    log_dir,
+    env_name,
+    subtask_str,
+    video_tracking,
+    postfix,
+    wb_tag,
+    seed=0,
 ):
     wb_options = dict(
         name=f"{env_name}-{subtask_str}-seed{seed}{postfix}",
@@ -37,6 +41,7 @@ def get_wb_options(
         dir=log_dir,
     )
     return wb_options
+
 
 def save(trainer, save_path):
     """Save discriminator and generator."""
@@ -276,7 +281,7 @@ def train_adversarial(
     results["imit_stats"] = rollout.rollout_stats(trajs)
 
     venv.close()
-    
+
     return results
 
 

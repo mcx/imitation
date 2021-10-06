@@ -113,7 +113,10 @@ def rollouts_and_policy(
 
     custom_writers = []
     if wb_integration:
-        writer = wb_logger.WandbOutputFormat(wb_options=_config["wb_options"], config=_config)
+        writer = wb_logger.WandbOutputFormat(
+            wb_options=_config["wb_options"],
+            config=_config,
+        )
         custom_writers.append(writer)
     custom_logger = logger.configure(
         folder=osp.join(log_dir, "rl"),
@@ -127,18 +130,20 @@ def rollouts_and_policy(
     os.makedirs(policy_dir, exist_ok=True)
 
     post_wrappers = [lambda env, idx: wrappers.RolloutInfoWrapper(env)]
-    if video_tracking: 
+    if video_tracking:
         # Only wrap the first environment for video tracking
         video_writing_dir = osp.join(log_dir, "videos")
         post_wrappers += [
             lambda env, idx: video_wrapper.VideoWrapper(
-                env=env, 
-                directory=video_writing_dir, 
+                env=env,
+                directory=video_writing_dir,
                 single_video=False,
                 save_interval=video_save_interval,
-            ) if idx == 0 else env
+            )
+            if idx == 0
+            else env,
         ]
-        
+
     venv = util.make_vec_env(
         env_name,
         num_vec,
