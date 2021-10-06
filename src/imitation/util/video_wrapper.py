@@ -6,7 +6,7 @@ import gym
 from gym.wrappers.monitoring import video_recorder
 
 from imitation.data import types
-
+from typing import Optional
 
 class VideoWrapper(gym.Wrapper):
     """Creates videos from wrapped environment by calling render after each timestep."""
@@ -16,6 +16,7 @@ class VideoWrapper(gym.Wrapper):
         env: gym.Env,
         directory: types.AnyPath,
         single_video: bool = True,
+        save_interval: Optional[int] = None,
     ):
         """Builds a VideoWrapper.
 
@@ -27,11 +28,18 @@ class VideoWrapper(gym.Wrapper):
                 Usually a single video file is what is desired. However, if one is
                 searching for an interesting episode (perhaps by looking at the
                 metadata), then saving to different files can be useful.
+            save_interval: the number of episodes skipped between video saving. Only
+                used if `single_video == False`.
         """
         super().__init__(env)
         self.episode_id = 0
         self.video_recorder = None
         self.single_video = single_video
+        self.save_interval = save_interval
+        if save_interval is not None:
+            assert not self.single_video, "save_interval not working for single video"
+            if not isinstance(save_interval, int) or save_interval < 1:
+                raise ValueError(f"save_interval {save_interval} must be positive int")
 
         self.directory = os.path.abspath(directory)
         os.makedirs(self.directory)
@@ -61,13 +69,15 @@ class VideoWrapper(gym.Wrapper):
             )
 
     def reset(self):
-        self._reset_video_recorder()
+        if self.episode_id % self.save_interval == 0:
+            self._reset_video_recorder()
         self.episode_id += 1
         return self.env.reset()
 
     def step(self, action):
         res = self.env.step(action)
-        self.video_recorder.capture_frame()
+        if self.episode_id % self.save_interval == 0:
+            self.video_recorder.capture_frame()
         return res
 
     def close(self) -> None:

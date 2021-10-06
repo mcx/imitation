@@ -16,7 +16,7 @@ from imitation.policies import serialize
 from imitation.rewards.reward_wrapper import RewardVecEnvWrapper
 from imitation.rewards.serialize import load_reward
 from imitation.scripts.config.expert_demos import expert_demos_ex
-from imitation.util import logger, util
+from imitation.util import logger, util, video_wrapper, wb_logger
 
 
 @expert_demos_ex.main
@@ -44,6 +44,8 @@ def rollouts_and_policy(
     policy_save_final: bool,
     log_dir: str,
     wb_integration: bool,
+    video_tracking: bool,
+    video_save_interval: int,
 ) -> Mapping[str, float]:
     """Trains an expert policy from scratch and saves the rollouts and policy.
 
@@ -92,6 +94,8 @@ def rollouts_and_policy(
             finished.
         log_dir: The root directory to save metrics and checkpoints to.
         wb_integration: If True, then use wandb to log metrics.
+        video_tracking: If True, then use video_wrappers to log videos.
+        video_save_interval: The number of episodes between saving videos.
 
     Returns:
         The return value of `rollout_stats()` using the final policy.
@@ -122,6 +126,19 @@ def rollouts_and_policy(
     os.makedirs(rollout_dir, exist_ok=True)
     os.makedirs(policy_dir, exist_ok=True)
 
+    post_wrappers = [lambda env, idx: wrappers.RolloutInfoWrapper(env)]
+    if video_tracking: 
+        # Only wrap the first environment for video tracking
+        video_writing_dir = osp.join(log_dir, "videos")
+        post_wrappers += [
+            lambda env, idx: video_wrapper.VideoWrapper(
+                env=env, 
+                directory=video_writing_dir, 
+                single_video=False,
+                save_interval=video_save_interval,
+            ) if idx == 0 else env
+        ]
+        
     venv = util.make_vec_env(
         env_name,
         num_vec,
@@ -129,7 +146,7 @@ def rollouts_and_policy(
         parallel=parallel,
         log_dir=log_dir,
         max_episode_steps=max_episode_steps,
-        post_wrappers=[lambda env, idx: wrappers.RolloutInfoWrapper(env)],
+        post_wrappers=post_wrappers,
         env_make_kwargs=env_make_kwargs,
     )
 

@@ -37,6 +37,8 @@ def expert_demos_defaults():
 
     log_root = os.path.join("output", "expert_demos")  # output directory
     wb_integration = False  # If True, use wandb for logging
+    video_tracking = False  # If True, track videos and save to {log_dir}/videos
+    video_save_interval = 20  # Num timesteps between video saves (<=0 disables)
 
 
 @expert_demos_ex.config
