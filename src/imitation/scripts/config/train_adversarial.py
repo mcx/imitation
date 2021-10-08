@@ -56,6 +56,10 @@ def train_defaults():
     rollout_hint = None  # Used to generate default rollout_path
     data_dir = "data/"  # Default data directory
 
+    wb_integration = False  # If True, use wandb for logging
+    video_tracking = False  # If True, track videos and save to {log_dir}/videos
+    video_save_interval = 20  # Num timesteps between video saves (<=0 disables)
+
 
 @train_adversarial_ex.config
 def aliases_default_gen_batch_size(algorithm_kwargs, gen_batch_size):
@@ -91,6 +95,20 @@ def paths(env_name, log_root, rollout_hint, data_dir):
         f"{rollout_hint}_0",
         "rollouts",
         "final.pkl",
+    )
+
+
+# Optional for WandB integration, this is used only when wandb_integration=True
+# Users can overwrite this with their own function
+
+
+@train_adversarial_ex.config
+def wb_integration_only_defaults(env_name, seed, log_dir):
+    wb_options = dict(
+        project="imitation",
+        name=f"{env_name}-seed{seed}",
+        monitor_gym=False,
+        dir=log_dir,
     )
 
 

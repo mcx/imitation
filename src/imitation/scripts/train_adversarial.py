@@ -19,28 +19,7 @@ from imitation.rewards import reward_nets
 from imitation.scripts.config.train_adversarial import train_adversarial_ex
 from imitation.util import logger
 from imitation.util import sacred as sacred_util
-from imitation.util import util
-from imitation.util.logger import WandbOutputFormat
-
-
-@train_adversarial_ex.capture
-def get_wb_options(
-    log_dir,
-    env_name,
-    subtask_str,
-    video_tracking,
-    postfix,
-    wb_tag,
-    seed=0,
-):
-    wb_options = dict(
-        name=f"{env_name}-{subtask_str}-seed{seed}{postfix}",
-        tags=[str(env_name), subtask_str, f"seed{seed}"] + [wb_tag],
-        monitor_gym=True if video_tracking else False,
-        save_code=True,
-        dir=log_dir,
-    )
-    return wb_options
+from imitation.util import util, video_wrapper, wb_logger
 
 
 def save(trainer, save_path):
@@ -81,8 +60,9 @@ def train_adversarial(
     reward_net_cls: Optional[Type[reward_nets.RewardNet]],
     reward_net_kwargs: Optional[Mapping[str, Any]],
     algorithm_kwargs: Mapping[str, Mapping],
-    wandb_integration: Optional[bool],
-    video_tracking: Optional[bool],
+    wb_integration: bool,
+    video_tracking: bool,
+    video_save_interval: int,
 ) -> Mapping[str, Mapping[str, float]]:
     """Train an adversarial-network-based imitation learning algorithm.
 
@@ -138,8 +118,10 @@ def train_adversarial(
             to both the `AIRL` and `GAIL` constructors. Duplicate keyword argument keys
             between `algorithm_kwargs["shared"]` and `algorithm_kwargs["airl"]` (or
             "gail") leads to an error.
-        wandb_integration: If True, then save the experiment logs to wandb.
-        video_tracking: If True, then save the video tracking data.
+        wb_integration: If True, then add a customized wandb writer to logger. Logged
+            metrics will be saved and uploaded to wandb.
+        video_tracking: If True, then use video_wrappers to save videos.
+        video_save_interval: The number of episodes between saving videos.
 
     Returns:
         A dictionary with two keys. "imit_stats" gives the return value of
@@ -182,10 +164,15 @@ def train_adversarial(
 
     total_timesteps = int(total_timesteps)
 
+    os.makedirs(log_dir, exist_ok=True)
+    sacred_util.build_sacred_symlink(log_dir, _run)
+
     custom_writers = []
-    if wandb_integration:
-        wb_options = get_wb_options()
-        writer = WandbOutputFormat(wb_options=wb_options, config=_config)
+    if wb_integration:
+        writer = wb_logger.WandbOutputFormat(
+            wb_options=_config["wb_options"],
+            config=_config,
+        )
         custom_writers.append(writer)
     custom_logger = logger.configure(
         folder=osp.join(log_dir, "rl"),
@@ -193,8 +180,20 @@ def train_adversarial(
         custom_writers=custom_writers,
     )
 
-    os.makedirs(log_dir, exist_ok=True)
-    sacred_util.build_sacred_symlink(log_dir, _run)
+    post_wrappers = []
+    if video_tracking:
+        # Only wrap the first environment for video tracking
+        video_writing_dir = osp.join(log_dir, "videos")
+        post_wrappers += [
+            lambda env, idx: video_wrapper.VideoWrapper(
+                env=env,
+                directory=video_writing_dir,
+                single_video=False,
+                save_interval=video_save_interval,
+            )
+            if idx == 0
+            else env,
+        ]
 
     venv = util.make_vec_env(
         env_name,
@@ -205,14 +204,6 @@ def train_adversarial(
         max_episode_steps=max_episode_steps,
         env_make_kwargs=env_make_kwargs,
     )
-
-    if video_tracking:
-        venv = VecVideoRecorder(
-            venv,
-            osp.join(log_dir, "videos"),
-            record_video_trigger=lambda x: x % 5000 == 0,
-            video_length=500,
-        )
 
     gen_algo = util.init_rl(
         venv,
