@@ -33,7 +33,7 @@ class WandbOutputFormat(sb_logger.KVWriter):
             sorted(key_values.items()),
             sorted(key_excluded.items()),
         ):
-            if excluded is not None:
+            if excluded is not None and "wandb" in excluded:
                 continue
             wandb.log({key: value}, step=step)
 
