@@ -70,7 +70,7 @@ def rollouts_from_policy_only_defaults(log_dir):
 
 
 # Optional for WandB integration, this is used only when wandb_integration=True
-# New users can overwrite this with their own function
+# Users can overwrite this with their own function
 
 
 @expert_demos_ex.config

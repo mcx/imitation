@@ -93,8 +93,9 @@ def rollouts_and_policy(
         policy_save_final: If True, then save the policy right after training is
             finished.
         log_dir: The root directory to save metrics and checkpoints to.
-        wb_integration: If True, then use wandb to log metrics.
-        video_tracking: If True, then use video_wrappers to log videos.
+        wb_integration: If True, then add a customized wandb writer to logger. Logged
+            metrics will be saved and uploaded to wandb.
+        video_tracking: If True, then use video_wrappers to save videos.
         video_save_interval: The number of episodes between saving videos.
 
     Returns:
