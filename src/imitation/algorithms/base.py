@@ -6,6 +6,7 @@ from typing import Any, Generic, Iterable, Mapping, Optional, TypeVar, Union
 import numpy as np
 import torch as th
 import torch.utils.data as th_data
+from stable_baselines3.common import policies
 
 from imitation.data import rollout, types
 from imitation.util import logger as imit_logger
@@ -65,7 +66,7 @@ class BaseImitationAlgorithm(abc.ABC):
         self._logger = value
 
     def _check_fixed_horizon(self, horizons: Iterable[int]) -> None:
-        """Checks that `trajs` has fixed episode length and equal to prior calls.
+        """Checks that episode lengths in `horizons` are fixed and equal to prior calls.
 
         If algorithm is safe to use with variable horizon episodes (e.g. behavioral
         cloning), then just don't call this method.
@@ -165,6 +166,11 @@ class DemonstrationAlgorithm(BaseImitationAlgorithm, Generic[TransitionKind]):
                 yields dictionaries containing "obs" and "acts" Tensors or NumPy arrays,
                 `TransitionKind` instance, or a Sequence of Trajectory objects.
         """
+
+    @property
+    @abc.abstractmethod
+    def policy(self) -> policies.BasePolicy:
+        """Returns a policy imitating the demonstration data."""
 
 
 class _WrappedDataLoader:

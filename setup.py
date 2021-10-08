@@ -5,15 +5,17 @@ from setuptools import find_packages, setup
 import src.imitation  # pytype: disable=import-error
 
 TESTS_REQUIRE = [
-    "seals>=0.1.1",
+    # TODO(adam): switch back to PyPi release once PR incorporated:
+    # https://github.com/HumanCompatibleAI/seals/pull/51
+    "seals @ git+https://github.com/HumanCompatibleAI/seals.git@master#egg=seals",
     "black",
     "coverage",
     "codecov",
     "codespell",
     # TODO(adam): switch back to PyPi release once PR incorporated:
     # https://github.com/terrencepreilly/darglint/pull/176
-    "darglint @ "
-    "git+https://github.com/AdamGleave/darglint.git@flake8-ignore#egg=darglint",
+    "darglint @ git+"
+    "https://github.com/AdamGleave/darglint.git@flake8-ignore#egg=darglint",
     "flake8",
     "flake8-blind-except",
     "flake8-builtins",
@@ -92,8 +94,18 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            ("imitation-expert-demos=imitation.scripts.expert_demos" ":main_console"),
-            "imitation-train=imitation.scripts.train_adversarial:main_console",
+            "imitation-eval-policy=imitation.scripts.eval_policy:main_console",
+            "imitation-parallel=imitation.scripts.parallel:main_console",
+            (
+                "imitation-train-adversarial="
+                "imitation.scripts.train_adversarial:main_console"
+            ),
+            "imitation-train-imitation=imitation.scripts.train_imitation:main_console",
+            (
+                "imitation-train-preference-comparisons="
+                "imitation.scripts.train_preference_comparisons:main_console"
+            ),
+            "imitation-train-rl=imitation.scripts.train_rl:main_console",
         ],
     },
     url="https://github.com/HumanCompatibleAI/imitation",
