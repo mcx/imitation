@@ -4,9 +4,10 @@ import contextlib
 import datetime
 import os
 import tempfile
-from typing import Generator, Optional, Sequence
+from typing import Any, Dict, Generator, Mapping, Optional, Sequence, Tuple, Union
 
 import stable_baselines3.common.logger as sb_logger
+import wandb
 
 from imitation.data import types
 
@@ -153,6 +154,41 @@ class HierarchicalLogger(sb_logger.Logger):
         self.default_logger.close()
         for logger in self._cached_loggers.values():
             logger.close()
+
+
+class WandbOutputFormat(sb_logger.KVWriter):
+    """A stable-baseline logger that writes to wandb."""
+
+    def __init__(
+        self,
+        wandb_kwargs: Mapping[str, Any],
+        config: Mapping[str, Any],
+    ):
+        """Builds WandbOutputFormat.
+
+        Args:
+            wandb_kwargs: A dictionary of key_values to pass to wandb.init.
+            config: A dictionary of config values to log to wandb.
+
+        """
+        wandb.init(config=config, **wandb_kwargs)
+
+    def write(
+        self,
+        key_values: Dict[str, Any],
+        key_excluded: Dict[str, Union[str, Tuple[str, ...]]],
+        step: int = 0,
+    ) -> None:
+        for (key, value), (_, excluded) in zip(
+            sorted(key_values.items()),
+            sorted(key_excluded.items()),
+        ):
+            if excluded is not None and "wandb" in excluded:
+                continue
+            wandb.log({key: value}, step=step)
+
+    def close(self) -> None:
+        wandb.finish()
 
 
 def configure(

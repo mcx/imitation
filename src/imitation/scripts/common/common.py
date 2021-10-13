@@ -102,7 +102,11 @@ def setup_logging(
         Returning `log_dir` avoids the caller needing to capture this value.
     """
     log_dir = make_log_dir()
-    custom_logger = imit_logger.configure(os.path.join(log_dir, "log"), log_format_strs)
+
+    custom_logger = imit_logger.configure(
+        folder=os.path.join(log_dir, "log"),
+        format_strs=log_format_strs,
+    )
     return custom_logger, log_dir
 
 
